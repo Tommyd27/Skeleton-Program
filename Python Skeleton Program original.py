@@ -1,65 +1,75 @@
 import random
 
-class CellReference:
-  def __init__(self):
-    self.NoOfCellsEast = 0
-    self.NoOfCellsSouth = 0
+def sign(num):
+  return -1 if num < 0 else 1
+class Position:#Anything on the map will be a position
+  def __init__(s, x, y) -> None:
+    s._x = x
+    s._y = y
+  def __eq__(s, o) -> bool:
+    return s._x == o.x and s._y == o.y
+  def __add__(s, o) -> bool:
+    return s._x + o.x and s._y + o.y
+  def __lt__(s, o) -> bool:
+    return s._x < o.x and s._y < o.y
+  def __gt__(s, o) -> bool:
+    return s._x > o.x and s._y > o.y
 
-class Item:
-  def __init__(self):
-    self.NoOfCellsEast = 0
-    self.NoOfCellsSouth = 0
+  @property
+  def x(s):
+    return s._x
+  @x.setter
+  def x(s, x):
+    s._x = x
+  @property
+  def y(s):
+    return s._y
+  @y.setter
+  def y(s, y):
+    s._y = y
+  @property
+  def pos(s):
+    return s._x, s._y
+  @pos.setter
+  def pos(s, x, y):
+    s._x = x
+    s._y = y
 
-  def CheckIfSameCell(self, Position):
-    if (self.NoOfCellsEast == Position.NoOfCellsEast) and (self.NoOfCellsSouth == Position.NoOfCellsSouth):
-      return True
-    else:
-      return False  
+class Item(Position):
+  def __init__(s, x, y):
+    super(Item, s).__init__(x, y)       
 
-  def GetPosition(self):
-    Position = CellReference()  
-    Position.NoOfCellsEast = self.NoOfCellsEast
-    Position.NoOfCellsSouth = self.NoOfCellsSouth
-    return Position
-
-  def SetPosition(self, Position):
-    self.NoOfCellsEast = Position.NoOfCellsEast
-    self.NoOfCellsSouth = Position.NoOfCellsSouth            
-
-class Character(Item):
-  def __init__(self):             
-    Item.__init__(self)     
+class Character(Position):
+  def __init__(s, x = 0, y = 0):             
+    super(Position, s).__init__(x, y)    
 
   def MakeMove(self, Direction):
-    if Direction == 'N':
-      self.NoOfCellsSouth = self.NoOfCellsSouth - 1 
-    elif Direction == 'S':
-      self.NoOfCellsSouth = self.NoOfCellsSouth + 1            
-    elif Direction == 'W':
-      self.NoOfCellsEast = self.NoOfCellsEast - 1 
-    elif Direction == 'E':
-      self.NoOfCellsEast = self.NoOfCellsEast + 1
+    direction = direction.lower()
+    if Direction == 'n':
+      self._y += 1 
+    elif Direction == 's':
+      self._y -= 1            
+    elif Direction == 'w':
+      self._x -=  1 
+    elif Direction == 'e':
+      self._x +=  1
 
-class Enemy(Item):
-  def __init__(self):
-    Item.__init__(self) 
-    self.Awake = False 
+class Enemy(Position):
+  def __init__(s, x = 0, y = 0, isAwake = False):             
+    super(Position, s).__init__(x, y)
+    s._awake = isAwake
+  @property
+  def awake(s):
+    return s._awake
+  @awake.setter
+  def awake(s, isAwake):
+    s._awake = isAwake
 
-  def ChangeSleepStatus(self):
-    self.Awake = not self.Awake
-
-  def GetAwake(self):
-    return self.Awake
-
-  def MakeMove(self, PlayerPosition):
-    if self.NoOfCellsSouth < PlayerPosition.NoOfCellsSouth:
-      self.NoOfCellsSouth = self.NoOfCellsSouth + 1
-    elif self.NoOfCellsSouth > PlayerPosition.NoOfCellsSouth:
-      self.NoOfCellsSouth = self.NoOfCellsSouth - 1 
-    elif self.NoOfCellsEast < PlayerPosition.NoOfCellsEast:
-      self.NoOfCellsEast = self.NoOfCellsEast + 1
+  def MakeMove(s, Player):
+    if random.randint(0, 1) == 0 and Player.y - s._y != 0:
+      s._y = 1 * sign
     else:
-      self.NoOfCellsEast = self.NoOfCellsEast - 1 
+      pass
 
 class Trap(Item):
   def __init__(self):
@@ -96,14 +106,14 @@ class Grid:
     print()     
 
   def PlaceItem(self, Position, Item):
-    self.CavernState[Position.NoOfCellsSouth][Position.NoOfCellsEast] = Item
+    self.CavernState[Position.y][Position.x] = Item
 
   def IsCellEmpty(self, Position):
-    if Position.NoOfCellsEast < 0 or Position.NoOfCellsEast > Game.WE:
+    if Position.x < 0 or Position.x > Game.WE:
       print("Error")
-    if Position.NoOfCellsSouth < 0 or Position.NoOfCellsSouth > Game.NS:
+    if Position.y < 0 or Position.y > Game.NS:
       print("Error")
-    if self.CavernState[Position.NoOfCellsSouth][Position.NoOfCellsEast] == ' ':
+    if self.CavernState[Position.y][Position.x] == ' ':
       return True
     else:
       return False
@@ -133,7 +143,7 @@ class Game:
     Eaten = False
     FlaskFound = False
     MoveDirection = ' '
-    Position = CellReference()
+    Position = Cell()
     self.Cavern.Display(self.Monster.GetAwake())
     while not Eaten and not FlaskFound and (MoveDirection != 'M'):
       ValidMove = False
@@ -219,11 +229,11 @@ class Game:
     return Position
 
   def SetUpGame(self):
-    Position = CellReference()
+    Position = Cell()
     self.Cavern.Reset()
     if not self.TrainingGame:
-      Position.NoOfCellsEast = 0
-      Position.NoOfCellsSouth = 0
+      Position.x = 0
+      Position.y = 0
       self.Player.SetPosition(Position)
       self.Cavern.PlaceItem(Position, '*')
       self.Trap1.SetPosition(self.SetPositionOfItem('T'))
@@ -231,32 +241,32 @@ class Game:
       self.Monster.SetPosition(self.SetPositionOfItem('M'))
       self.Flask.SetPosition(self.SetPositionOfItem('F'))
     else:
-      Position.NoOfCellsEast = 4
-      Position.NoOfCellsSouth = 2
+      Position.x = 4
+      Position.y = 2
       self.Player.SetPosition(Position)
       self.Cavern.PlaceItem(Position, '*')
-      Position.NoOfCellsEast = 6
-      Position.NoOfCellsSouth = 2
+      Position.x = 6
+      Position.y = 2
       self.Trap1.SetPosition(Position)
       self.Cavern.PlaceItem(Position, 'T')
-      Position.NoOfCellsEast = 4
-      Position.NoOfCellsSouth = 3
+      Position.x = 4
+      Position.y = 3
       self.Trap2.SetPosition(Position)
       self.Cavern.PlaceItem(Position, 'T')
-      Position.NoOfCellsEast = 4
-      Position.NoOfCellsSouth = 0
+      Position.x = 4
+      Position.y = 0
       self.Monster.SetPosition(Position)
       self.Cavern.PlaceItem(Position, 'M')
-      Position.NoOfCellsEast = 3
-      Position.NoOfCellsSouth = 1
+      Position.x = 3
+      Position.y = 1
       self.Flask.SetPosition(Position)
       self.Cavern.PlaceItem(Position, 'F')
 
   def GetNewRandomPosition(self):
-    Position = CellReference()
-    while (Position.NoOfCellsSouth == 0) and (Position.NoOfCellsEast == 0):
-      Position.NoOfCellsSouth = random.randint(0, Game.NS)
-      Position.NoOfCellsEast = random.randint(0, Game.WE)
+    Position = Cell()
+    while (Position.y == 0) and (Position.x == 0):
+      Position.y = random.randint(0, Game.NS)
+      Position.x = random.randint(0, Game.WE)
     return Position
   
 def DisplayMenu():
