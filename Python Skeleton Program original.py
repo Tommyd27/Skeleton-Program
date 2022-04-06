@@ -261,8 +261,9 @@ class Game:
 			r.shuffle(itemIdentifiers)
 			s.items = [Item(s.Cave.GenerateRandomPosition().pos, itemIdentifiers.pop(0)) for _ in range(r.randint(1, len(itemIdentifiers)))]
 		s.Cave.AddPositionsToGrid(s.Player, s.Monster, s.items)
-		s.Play()
 		r.seed()
+		s.Play()
+		
 
 	def Play(s):
 		try:
