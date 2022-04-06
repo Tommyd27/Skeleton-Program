@@ -70,7 +70,8 @@ class Position:  # Anything on the map will be a position
 	def gID(s, gridIdentifier):
 		s._gID = gridIdentifier
 
-
+	def __repr__(s) -> str:
+		return f"x : {s._x}, y : {s._y}"
 class Item(Position):
 	def __init__(s, pos, identifier):
 		super(Item, s).__init__(pos[0], pos[1], identifier)
@@ -78,9 +79,9 @@ class Item(Position):
 
 class Character(Position):
 	possibleMoves = {"w" : Position(0, -1),
-					 "a" : Position(1, 0),
+					 "a" : Position(-1, 0),
 					 "s" : Position(0, 1),
-					 "d" : Position(-1, 0),
+					 "d" : Position(1, 0),
 					}
 	def __init__(s, pos):
 		super(Character, s).__init__(pos[0], pos[1], "*")
@@ -104,19 +105,24 @@ class Character(Position):
 			print("Sorry, that is not a valid move.")
 	def TakeTurn(s, grid):
 		s.MakeMove(grid)
-		for pos in grid:
-			if isinstance(pos, Item):
-				if pos == s:
-					s._collectedItems.append(pos)
+		s.PickupItems(grid)
+	def PickupItems(s, grid):
+		itemsToCollect = [x for x in grid if s == x and isinstance(x, Item)]
+		s._collectedItems += itemsToCollect
+		grid.removeList(itemsToCollect)
+		
+					
 class Enemy(Position):
 	positionIdentifiers = {True  : "!",
 						   False : " ",	
 						  }
 	defaultSleepCounter = 4
-	def __init__(s, pos, isAwake=False, sleepCounter = -1):
+	def __init__(s, pos, isAwake=False, sleepCounter = True):
 		super(Enemy, s).__init__(pos[0], pos[1])
 		s._awake = isAwake
-		s._sleepCounter = sleepCounter
+		if sleepCounter == True:
+			s._sleepCounterStat = Enemy.defaultSleepCounter
+		s._sleepCounter = s._sleepCounterStat
 		s._gID = Enemy.positionIdentifiers[s._awake]
 
 	@property
@@ -130,13 +136,20 @@ class Enemy(Position):
 
 	def toggleAwake(s):
 		s._awake = not s._awake
+		s.gID = Enemy.positionIdentifiers[s._awake]
+		s._sleepCounter = s._sleepCounterStat
 	@property
 	def sleepCounter(s):
 		return s._sleepCounter
 	@sleepCounter.setter
 	def sleepCounter(s, count):
 		s._sleepCounter = count
-
+	@property
+	def sleepCounterStat(s):
+		return s._sleepCounterStat
+	@sleepCounterStat.setter
+	def sleepCounter(s, count):
+		s._sleepCounterStat = count
 
 	def TakeTurn(s, player):
 		s._sleepCounter -= 1
@@ -156,9 +169,10 @@ class Enemy(Position):
 		try:
 			move = r.choice(idealMove)
 			if move[0] == "x":
-				s._x = sign(move[1])
+				s._x += sign(move[1])
 			else:
-				s._y = sign(move[1])
+				s._y += sign(move[1])
+			
 		except IndexError:
 			pass  # In same square as Character
 
@@ -182,7 +196,7 @@ class Grid:
 		if xSize < 1 or ySize < 1:
 			raise ValueError("Grid Size must be larger than 0")
 		s._posMin = Position(0, 0)
-		s._posMax = Position(xSize, ySize)
+		s._posMax = Position(xSize - 1, ySize - 1)
 		s._gridState = []
 
 	@property
@@ -204,21 +218,30 @@ class Grid:
 		else:
 			raise StopIteration
 	def __repr__(s) -> str:
-		dividerLine = "-" * (s._posMax.x * 2 + 1)
+		dividerLine = "-" * ((s._posMax.x + 1) * 2 + 1)
 		output = [dividerLine]
-		for y in range(s._posMax.y):
+		playerPos = [x for x in s._gridState if isinstance(x, Character)][0]
+		for y in range(s._posMax.y + 1):
 			line = "|"
-			for x in range(s._posMax.x):
-				try:
-					positionIdentifier = s._gridState[s._gridState.index(Position(x, y))].gID
-				except ValueError:
-					positionIdentifier = Grid.blankSpace
+			for x in range(s._posMax.x + 1):
+				if Position(x, y) == playerPos:
+					positionIdentifier = playerPos.gID
+				else:
+					try:
+						positionIdentifier = s._gridState[s._gridState.index(Position(x, y))].gID
+					except ValueError:
+						positionIdentifier = Grid.blankSpace
 				line += f"{positionIdentifier}|"
 			output.append(line)
 			output.append(dividerLine)
 		outputSTR = "\n".join(output)
 		return outputSTR
+	def remove(s, item):
+		s._gridState.remove(item)
 
+	def removeList(s, listToRemove):
+		for item in listToRemove:
+			s._gridState.remove(item)
 	def AddPositionsToGrid(s, *args, unique = False):
 		lists = [x for x in args if isinstance(x, list)]
 		nonLists = [x for x in args if not isinstance(x, list)]
@@ -232,14 +255,14 @@ class Grid:
 				raise ValueError("Item Already at that Location")
 			s._gridState.append(positionToAdd)
 	def InGrid(s, position):
-		return s._posMin < position <= s._posMax
+		return s._posMin <= position <= s._posMax
 	def GenerateRandomPosition(s, unique = True):
-		x = r.randint(0, s._posMax.x - 1)
-		y = r.randint(0, s._posMax.y - 1)
+		x = r.randint(0, s._posMax.x)
+		y = r.randint(0, s._posMax.y)
 		nPos = Position(x, y)
 		while unique and nPos in s._gridState:
-			x = r.randint(0, s._posMax.x - 1)
-			y = r.randint(0, s._posMax.y - 1)
+			x = r.randint(0, s._posMax.x)
+			y = r.randint(0, s._posMax.y)
 			nPos = Position(x, y)
 		return nPos
 
@@ -256,7 +279,7 @@ class Game:
 			s.items = [Item((3, 3), "F"), Item((6, 2), "T"), Item((8, 8), "P")]
 		else:
 			s.Player = Character(s.Cave.GenerateRandomPosition(False).pos)
-			s.Monster = Enemy(s.Cave.GenerateRandomPosition().pos, sleepCounter = 2)
+			s.Monster = Enemy(s.Cave.GenerateRandomPosition().pos)
 			itemIdentifiers = ["F", "T", "P"]
 			r.shuffle(itemIdentifiers)
 			s.items = [Item(s.Cave.GenerateRandomPosition().pos, itemIdentifiers.pop(0)) for _ in range(r.randint(1, len(itemIdentifiers)))]
